@@ -38,6 +38,102 @@ A Node.js implementation of RTMP/HTTP-FLV/WS-FLV/HLS/DASH Media Server
 
 # Usage 
 
+The npm version is recommended, but there is a docker and npx options.
+
+## npm version (recommended)
+### Install node-media-server
+```bash
+mkdir nms
+cd nms
+npm install node-media-server
+```
+
+### create / update server config
+Create an ```app.js``` file with the configuration for the server.  The configuration for the npx server is in 
+[bin/app.js](bin/app.js) - note the auth: section with api_user: 'admin' make sure to **change** the api-pass: 'admin' to something else. 
+
+There are also **https** options in the app.js in the bin folder. 
+
+```js
+#!/usr/bin/env node 
+
+const NodeMediaServer = require('node-media-server');
+
+const config = {
+  rtmp: {
+    port: 1935,
+    chunk_size: 60000,
+    gop_cache: true,
+    ping: 30,
+    ping_timeout: 60
+  },
+  http: {
+    port: 8000,
+    mediaroot: __dirname+'/media',
+    webroot: __dirname+'/www',
+    allow_origin: '*',
+    api: true
+  },
+  auth: {
+    api: true,
+    api_user: 'admin',
+    api_pass: 'admin',
+    play: false,
+    publish: false,
+    secret: 'nodemedia2017privatekey'
+  }
+};
+
+let nms = new NodeMediaServer(config);
+nms.run();
+
+nms.on('preConnect', (id, args) => {
+  console.log('[NodeEvent on preConnect]', `id=${id} args=${JSON.stringify(args)}`);
+  // let session = nms.getSession(id);
+  // session.reject();
+});
+
+nms.on('postConnect', (id, args) => {
+  console.log('[NodeEvent on postConnect]', `id=${id} args=${JSON.stringify(args)}`);
+});
+
+nms.on('doneConnect', (id, args) => {
+  console.log('[NodeEvent on doneConnect]', `id=${id} args=${JSON.stringify(args)}`);
+});
+
+nms.on('prePublish', (id, StreamPath, args) => {
+  console.log('[NodeEvent on prePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+  // let session = nms.getSession(id);
+  // session.reject();
+});
+
+nms.on('postPublish', (id, StreamPath, args) => {
+  console.log('[NodeEvent on postPublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+});
+
+nms.on('donePublish', (id, StreamPath, args) => {
+  console.log('[NodeEvent on donePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+});
+
+nms.on('prePlay', (id, StreamPath, args) => {
+  console.log('[NodeEvent on prePlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+  // let session = nms.getSession(id);
+  // session.reject();
+});
+
+nms.on('postPlay', (id, StreamPath, args) => {
+  console.log('[NodeEvent on postPlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+});
+
+nms.on('donePlay', (id, StreamPath, args) => {
+  console.log('[NodeEvent on donePlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+});
+```
+
+```bash
+node app.js
+```
+
 ## npx 
 ```bash
 npx node-media-server
@@ -54,39 +150,7 @@ node-media-server
 docker run --name nms -d -p 1935:1935 -p 8000:8000 -p 8443:8443 illuspas/node-media-server
 ```
 
-## npm version (recommended)
 
-```bash
-mkdir nms
-cd nms
-npm install node-media-server
-vi app.js
-```
-
-```js
-const NodeMediaServer = require('node-media-server');
-
-const config = {
-  rtmp: {
-    port: 1935,
-    chunk_size: 60000,
-    gop_cache: true,
-    ping: 30,
-    ping_timeout: 60
-  },
-  http: {
-    port: 8000,
-    allow_origin: '*'
-  }
-};
-
-var nms = new NodeMediaServer(config)
-nms.run();
-```
-
-```bash
-node app.js
-```
 
 # Publishing live streams
 ## From FFmpeg
@@ -101,15 +165,19 @@ ffmpeg -re -i INPUT_FILE_NAME -c:v libx264 -preset veryfast -tune zerolatency -c
 ```
 
 ## From OBS
+For OBS you can stream to the server by replacing localhost in the URL rtmp below.  The <STREAM_NAME> will appear as
+the name of the stream on the server.  This can also be used to limit access to a list of known stream keys.
+
 >Settings -> Stream
 
 Stream Type : Custom Streaming Server
 
 URL : rtmp://localhost/live
 
-Stream key : STREAM_NAME
+Stream key : <STREAM_NAME>
 
 # Accessing the live stream
+Accessing via VLC can use the rtmp or the flv stream with the correct name instead of <STREAM_NAME>.
 ## RTMP 
 ```
 rtmp://localhost/live/STREAM_NAME
